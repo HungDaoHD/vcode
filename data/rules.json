@@ -1,0 +1,10 @@
+{
+  "language": "Tiếng Việt — phân tích ngữ nghĩa tiếng Việt, không dịch sang tiếng Anh",
+  "multi_code": "Mỗi verbatim có thể gán nhiều mã nếu đề cập nhiều chủ đề khác nhau",
+  "code_99": "Chỉ gán mã 99 (Khác) khi verbatim thực sự không thuộc bất kỳ mã nào, không dùng mã 99 thay thế cho mã cụ thể",
+  "confidence_low": "Gán confidence thấp (< 0.8) khi verbatim mơ hồ, có thể hiểu nhiều cách, hoặc thiếu thông tin",
+  "short_answer": "Với các câu trả lời rất ngắn (1–3 từ), cố gắng suy ra ý chính từ ngữ cảnh câu hỏi",
+  "negation": "Chú ý phủ định — 'không thích giá' khác với 'thích giá'",
+  "custom_rule_example": "Ví dụ rule tùy chỉnh: nếu đề cập 'ship' hoặc 'giao hàng' → gán mã liên quan đến Dịch vụ giao hàng",
+  "new_codes": "Nếu phát hiện verbatim không thể chuẩn hóa theo codeframe, ghi chú cho người dùng nên thêm code mới vào codeframe"
+}

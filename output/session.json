@@ -1,0 +1,813 @@
+{
+  "meta": {
+    "saved_at": "2026-03-19T13:54:41.560315",
+    "total_records": 40,
+    "questions": [
+      "Reason_EasyMaintenance",
+      "Concept_Like"
+    ],
+    "ai_provider": "gemini",
+    "model": "gemini-2.5-flash-lite"
+  },
+  "rules": {
+    "language": "Tiếng Việt — phân tích ngữ nghĩa tiếng Việt, không dịch sang tiếng Anh",
+    "multi_code": "Mỗi verbatim có thể gán nhiều mã nếu đề cập nhiều chủ đề khác nhau",
+    "code_99": "Chỉ gán mã 99 (Khác) khi verbatim thực sự không thuộc bất kỳ mã nào, không dùng mã 99 thay thế cho mã cụ thể",
+    "confidence_low": "Gán confidence thấp (< 0.8) khi verbatim mơ hồ, có thể hiểu nhiều cách, hoặc thiếu thông tin",
+    "short_answer": "Với các câu trả lời rất ngắn (1–3 từ), cố gắng suy ra ý chính từ ngữ cảnh câu hỏi",
+    "negation": "Chú ý phủ định — 'không thích giá' khác với 'thích giá'",
+    "custom_rule_example": "Ví dụ rule tùy chỉnh: nếu đề cập 'ship' hoặc 'giao hàng' → gán mã liên quan đến Dịch vụ giao hàng",
+    "new_codes": "Nếu phát hiện verbatim không thể chuẩn hóa theo codeframe, ghi chú cho người dùng nên thêm code mới vào codeframe"
+  },
+  "codeframes": {
+    "Reason_EasyMaintenance": {
+      "question_code": "Reason_EasyMaintenance",
+      "question_text": "Lý do chọn sản phẩm vì dễ dàng bảo trì, vệ sinh",
+      "codes": [
+        {
+          "code_id": "01",
+          "label": "Tự vệ sinh dễ dàng",
+          "description": "Người dùng có thể tự vệ sinh máy giặt mà không cần sự trợ giúp từ bên ngoài. Ví dụ: 'Tự vệ sinh được máy giặt không cần thuê thợ', 'Mâm giặt có thể tháo lắp dễ dàng giúp người dùng tự vệ sinh được thường xuyên'."
+        },
+        {
+          "code_id": "02",
+          "label": "Tiết kiệm chi phí",
+          "description": "Việc dễ dàng bảo trì, vệ sinh giúp tiết kiệm chi phí thuê dịch vụ. Ví dụ: 'tiết kiệm chi phí hơn', 'tiết kiệm chi phí thuê dịch vụ ngoài', 'đỡ tốn chi phí'."
+        },
+        {
+          "code_id": "03",
+          "label": "Tiết kiệm thời gian",
+          "description": "Việc bảo trì, vệ sinh nhanh chóng hoặc máy có chức năng tự làm sạch giúp tiết kiệm thời gian. Ví dụ: 'tích kiệm thời gian hơn', 'mất thời gian'."
+        },
+        {
+          "code_id": "04",
+          "label": "Chức năng tự làm sạch/loại bỏ xơ vải",
+          "description": "Máy có chức năng tự động làm sạch hoặc loại bỏ các yếu tố gây bẩn như xơ vải. Ví dụ: 'mình thích vif máy sẽ tự động xả sạch sơ vải', 'máy giặt tự động loại bỏ xơ vải'."
+        },
+        {
+          "code_id": "05",
+          "label": "Giữ quần áo sạch/mới lâu hơn",
+          "description": "Việc máy tự làm sạch giúp quần áo không bị bám bẩn, giữ quần áo sạch và mới lâu hơn. Ví dụ: 'quần áo không bị bám bụi', 'quần áo mới lâu hơn', 'sẽ không bị dính bụi bẩn và xơ vải vào lần giặt tiếp theo'."
+        },
+        {
+          "code_id": "06",
+          "label": "Chủ động kiểm soát vệ sinh",
+          "description": "Người dùng cảm thấy chủ động hơn trong việc kiểm soát độ sạch sẽ của máy giặt. Ví dụ: 'tự nắm bắt sạch bẩn của máy giặt hơn'."
+        },
+        {
+          "code_id": "99",
+          "label": "Khác / Other",
+          "description": "Các ý kiến không thuộc các mã trên."
+        }
+      ]
+    },
+    "Concept_Like": {
+      "question_code": "Concept_Like",
+      "question_text": "Những điểm bạn thích ở sản phẩm",
+      "codes": [
+        {
+          "code_id": "01",
+          "label": "Dễ sử dụng / Thao tác",
+          "description": "Đề cập đến sự dễ dàng trong việc sử dụng, thao tác, điều khiển máy giặt. Ví dụ: 'Dễ dàng sử dụng', 'thao tác dễ dàng', 'màn hình lớn dễ nhìn dễ thao tác', 'bảng điều khiển ở phía dưới giúp tất cả mọi người trong nhà đều có thể dễ dàng thao tác'."
+        },
+        {
+          "code_id": "02",
+          "label": "Thiết kế / Thẩm mỹ",
+          "description": "Đề cập đến kiểu dáng, vẻ ngoài, tính thẩm mỹ của sản phẩm. Ví dụ: 'Thiết kế trang nhã đẹp mắt', 'Thiết kế trượt hiện đại', 'thiết kế hiện đại, tiênn dụng', 'Thiết kế vân đá giúp không gian nội thất trong nhà hiện đại sang trọng'."
+        },
+        {
+          "code_id": "03",
+          "label": "Tiết kiệm không gian / Diện tích",
+          "description": "Đề cập đến khả năng tiết kiệm diện tích, tối ưu hóa không gian. Ví dụ: 'tiết kiệm diện tích sử dụng', 'tối đa diện tích không gian nhà', 'tối đa được diện tích hạn chế', 'Cửa trượt không cần mở hẳn cửa gây tốn diện tích'."
+        },
+        {
+          "code_id": "04",
+          "label": "Dễ vệ sinh / Tự vệ sinh",
+          "description": "Đề cập đến việc dễ dàng vệ sinh, lau chùi hoặc khả năng tự vệ sinh của máy. Ví dụ: 'dễ vệ sinh lau chùi', 'Dễ vệ sinh và tự vệ sinh', 'tự tháo lắp mâm giặt để vệ sinh'."
+        },
+        {
+          "code_id": "05",
+          "label": "Công nghệ thông minh / Tự động hóa",
+          "description": "Đề cập đến các tính năng công nghệ cao, tự động hóa, thông minh. Ví dụ: 'công nghệ thông minh', 'Tự động loại bỏ xơ vải', 'Điều khiển bằng giọng nói', 'Tự động xả sạch xơ vải'."
+        },
+        {
+          "code_id": "06",
+          "label": "Tiết kiệm thời gian",
+          "description": "Đề cập đến việc sản phẩm giúp tiết kiệm thời gian cho người sử dụng. Ví dụ: 'Tiết kiệm thời gian, nhanh hơn', 'không cần chủ động vệ sinh', 'không mất thời gian kiểm tra và vệ sinh'."
+        },
+        {
+          "code_id": "07",
+          "label": "Tiết kiệm chi phí",
+          "description": "Đề cập đến việc sản phẩm giúp tiết kiệm chi phí. Ví dụ: 'Tiết kiệm được chi phí vệ sinh', 'không cần thuê dịch vụ ngoài vì sẽ tiết kiệm được rất nhiều chi phí'."
+        },
+        {
+          "code_id": "08",
+          "label": "Thông thoáng / Ngăn ngừa ẩm mốc",
+          "description": "Đề cập đến tính năng giúp thông thoáng lồng giặt, ngăn ngừa ẩm mốc. Ví dụ: 'giúp cho máy giặt thông thoáng khô tự nhiên, ngăn ngừa được ẩm mốc', 'giúp thông thoáng lồng giặt', 'ngăn ngừa nấm mốc'."
+        },
+        {
+          "code_id": "09",
+          "label": "Thông tin / Hiển thị rõ ràng",
+          "description": "Đề cập đến các tính năng hiển thị thông tin rõ ràng, dễ nhận biết. Ví dụ: 'Bảng điều khiển có màn hình cảm ứng hiển thị lớn', 'Có đèn lead chiếu sáng bên trong lồng giặt', 'Có đèn báo hoạt động giúp dễ dàng cập nhập tình trạng giặt', 'Đèn báo hoạt động giúp người dùng biết rõ máy giặt đang ở chế độ giặt nước nóng hay nước thường'."
+        },
+        {
+          "code_id": "10",
+          "label": "Phù hợp nhiều đối tượng",
+          "description": "Đề cập đến việc sản phẩm phù hợp với nhiều lứa tuổi hoặc nhóm người dùng khác nhau. Ví dụ: 'phù hợp mọi lứa tuổi', 'phù hợp với cả người có chiều cao khiêm tốn'."
+        },
+        {
+          "code_id": "11",
+          "label": "Khả năng giặt / Sấy",
+          "description": "Đề cập đến khả năng giặt hoặc sấy, khối lượng giặt/sấy. Ví dụ: 'Khối lượng sấy nhiều có thể cho mình sấy được cả chăn'."
+        },
+        {
+          "code_id": "99",
+          "label": "Khác / Other",
+          "description": "Các ý kiến, nhận xét không thuộc các mã trên."
+        }
+      ]
+    }
+  },
+  "records": {
+    "Reason_EasyMaintenance": [
+      {
+        "ResID": "2001",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Tự vệ sinh được máy giặt không cần thuê thợ, tiết kiệm chi phí hơn",
+        "codes": [
+          "01",
+          "02"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Dễ dàng chủ động vệ sinh máy giặt và tiết kiệm chi phí thuê dịch vụ ngoài và tự nắm bắt sạch bẩn của máy giặt hơn",
+        "codes": [
+          "01",
+          "02",
+          "06"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng",
+          "Tiết kiệm chi phí",
+          "Chủ động kiểm soát vệ sinh"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Mâm giặt có thể tháo lắp dễ dàng giúp người dùng tự vệ sinh được thường xuyên mà không tốn nhiều chi phí giúp tiết kiệm chi phí hơn",
+        "codes": [
+          "01",
+          "02"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2004",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "mình thích vif máy sẽ tự động xả sạch sơ vải giúp tích kiệm thời gian hơn",
+        "codes": [
+          "04",
+          "03"
+        ],
+        "code_labels": [
+          "Chức năng tự làm sạch/loại bỏ xơ vải",
+          "Tiết kiệm thời gian"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2005",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "ngươi dùng có thể tự vê sinh máy giúp tiêt kiêm chi phí hơn",
+        "codes": [
+          "01",
+          "02"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2006",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "máy giặt tự động loại bỏ xơ vải giúp quần áo không bị bám bụi, thấy tiện lợi hơn",
+        "codes": [
+          "04",
+          "05",
+          "99"
+        ],
+        "code_labels": [
+          "Chức năng tự làm sạch/loại bỏ xơ vải",
+          "Giữ quần áo sạch/mới lâu hơn",
+          "Khác / Other"
+        ],
+        "confidence": 0.85,
+        "is_coded": true,
+        "needs_review": false,
+        "note": "Thấy tiện lợi hơn có thể hiểu là nhiều ý"
+      },
+      {
+        "ResID": "2007",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Máy giặt giúp loại bỏ xơ vải nên quần áo mới lâu hơn",
+        "codes": [
+          "04",
+          "05"
+        ],
+        "code_labels": [
+          "Chức năng tự làm sạch/loại bỏ xơ vải",
+          "Giữ quần áo sạch/mới lâu hơn"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2008",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "vì máy giặt giúp loại bỏ xơ vải nên sẽ không bị dính bụi bẩn và xơ vải vào lần giặt tiếp theo rất tiện lợi.",
+        "codes": [
+          "04",
+          "05"
+        ],
+        "code_labels": [
+          "Chức năng tự làm sạch/loại bỏ xơ vải",
+          "Giữ quần áo sạch/mới lâu hơn"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2009",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Thiết kế mới giúp mâm giặt dễ tháo nên tôi tự vệ sinh được mà không cần thuê thợ máy",
+        "codes": [
+          "01"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2010",
+        "question": "Reason_EasyMaintenance",
+        "verbatim": "Vì concept 8 có thể tự tháo mở máy mà không phải gọi thợ đến để làm , đỡ tốn chi phí và mất thời gian",
+        "codes": [
+          "01",
+          "02",
+          "03"
+        ],
+        "code_labels": [
+          "Tự vệ sinh dễ dàng",
+          "Tiết kiệm chi phí",
+          "Tiết kiệm thời gian"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      }
+    ],
+    "Concept_Like": [
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_1",
+        "verbatim": "Dễ dàng sử dụng,phù hợp mọi lứa tuổi có thể sử dụng được\nThiết kế trang nhã đẹp mắt, dễ vệ sinh lau chùi\nKo\nKo\nKo",
+        "codes": [
+          "01",
+          "10",
+          "02",
+          "04"
+        ],
+        "code_labels": [
+          "Dễ sử dụng / Thao tác",
+          "Phù hợp nhiều đối tượng",
+          "Thiết kế / Thẩm mỹ",
+          "Dễ vệ sinh / Tự vệ sinh"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_2",
+        "verbatim": "Thiết kế trượt hiện đại, tiết kiệm diện tích sử dụng\nKhông\nKo\nKo\nKo",
+        "codes": [
+          "02",
+          "03"
+        ],
+        "code_labels": [
+          "Thiết kế / Thẩm mỹ",
+          "Tiết kiệm không gian / Diện tích"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_3",
+        "verbatim": "Chân chống nắp máy giúp cho máy giặt thông thoáng khô tự nhiên, ngăn ngừa được ẩm mốc\nKo\nKo\nKo\nKo",
+        "codes": [
+          "08"
+        ],
+        "code_labels": [
+          "Thông thoáng / Ngăn ngừa ẩm mốc"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_4",
+        "verbatim": "Bảng điều khiển có màn hình cảm ứng hiển thị lớn giúp thao tác sử dụng dễ dàng\nKo\nKo\nKo\nKo",
+        "codes": [
+          "09",
+          "01"
+        ],
+        "code_labels": [
+          "Thông tin / Hiển thị rõ ràng",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_5",
+        "verbatim": "Bảng điều khiển có thể gấp gọn tiện dụng để tiện cho việc vệ sinh máy dễ dàng tiết kiệm không gian giặt giũ\nKo\nKo\nKo\nKo",
+        "codes": [
+          "02",
+          "04",
+          "03"
+        ],
+        "code_labels": [
+          "Thiết kế / Thẩm mỹ",
+          "Dễ vệ sinh / Tự vệ sinh",
+          "Tiết kiệm không gian / Diện tích"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_6",
+        "verbatim": "Điều khiển bằng giọng nói giúp tiện dụng, dễ dàng, công nghệ thông minh giúp con ngừoi dễ dàng điều khiển được máy giặt theo ý muốn\nKo\nKo\nKo\nKo",
+        "codes": [
+          "05",
+          "01"
+        ],
+        "code_labels": [
+          "Công nghệ thông minh / Tự động hóa",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_7",
+        "verbatim": "Tự động loại bỏ xơ vải không cần làm thủ công\nKhông cần vệ sinh thủ công, công nghệ mới\nTiết kiệm thời gian, nhanh hơn trong quá trình giặt\nKhông\nKhông",
+        "codes": [
+          "05",
+          "06"
+        ],
+        "code_labels": [
+          "Công nghệ thông minh / Tự động hóa",
+          "Tiết kiệm thời gian"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_8",
+        "verbatim": "Dễ vệ sinh và tự vệ sinh không cần thuê thợ\nTiết kiệm được chi phí vệ sinh\nKhông\nKhông\nKhông",
+        "codes": [
+          "04",
+          "07"
+        ],
+        "code_labels": [
+          "Dễ vệ sinh / Tự vệ sinh",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_9",
+        "verbatim": "Bề mặt mô phỏng giúp người sử dụng dễ nhận biết được máy giặt đang giặt chế độ nước nóng hay lạnh\nKo\nKo\nKo\nKo",
+        "codes": [
+          "09"
+        ],
+        "code_labels": [
+          "Thông tin / Hiển thị rõ ràng"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2001",
+        "question": "Concept_Like_10",
+        "verbatim": "Có đèn lead chiếu sáng bên trong lồng giặt để dễ nhận biết được máy đang dùng chế độ giặt nước nóng hay lạnh\nKo\nKo\nKo\nKo",
+        "codes": [
+          "09"
+        ],
+        "code_labels": [
+          "Thông tin / Hiển thị rõ ràng"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_1",
+        "verbatim": "Thiết kế vừa vặn có thể để kê lên cao giúp tối đa diện tích không gian nhà\nKhối lượng sấy nhiều có thể cho mình sấy được cả chăn\nKo\nKo\nKo",
+        "codes": [
+          "03",
+          "11"
+        ],
+        "code_labels": [
+          "Tiết kiệm không gian / Diện tích",
+          "Khả năng giặt / Sấy"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_2",
+        "verbatim": "Tối đa được diện tích hạn chế cho không gian giặt giũ cho những không gian nhà bé\nKo\nKo\nKo\nKo",
+        "codes": [
+          "03"
+        ],
+        "code_labels": [
+          "Tiết kiệm không gian / Diện tích"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_3",
+        "verbatim": "Chân chống nắp giúp thông thoáng lồng giặt giúp mình không cần mở hết nắp máy\nKo\nKo\nKo\nKo",
+        "codes": [
+          "08"
+        ],
+        "code_labels": [
+          "Thông thoáng / Ngăn ngừa ẩm mốc"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_4",
+        "verbatim": "Bảng điều khiển cảm ứng cho mình thao tác dễ sử dụng chọn lựa chế độ giặt hơn. Dễ dàng cập nhập được nhiều tính năng mới\nKo\nKo\nKo\nKo",
+        "codes": [
+          "01",
+          "09"
+        ],
+        "code_labels": [
+          "Dễ sử dụng / Thao tác",
+          "Thông tin / Hiển thị rõ ràng"
+        ],
+        "confidence": 0.95,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_5",
+        "verbatim": "Bảng điều khiển gấp gọn cảm thấy thiết kế hiện đại, tiênn dụng. Dễ dàng điều chỉnh để vệ sinh lau chùi\nKo\nKo\nKo\nKo",
+        "codes": [
+          "02",
+          "01",
+          "04"
+        ],
+        "code_labels": [
+          "Thiết kế / Thẩm mỹ",
+          "Dễ sử dụng / Thao tác",
+          "Dễ vệ sinh / Tự vệ sinh"
+        ],
+        "confidence": 0.9,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_6",
+        "verbatim": "Điều khiển bằng giọng nói là công nghệ thông minh giúp mình lựa chọn chương trình giặt bằng cảm biến tự động\nKo\nKo\nKo\nKo",
+        "codes": [
+          "05"
+        ],
+        "code_labels": [
+          "Công nghệ thông minh / Tự động hóa"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_7",
+        "verbatim": "Tiết kiệm thời gian giúp mình không cần chủ động vệ sinh\nTự động xả sạch sơ vải giúp mình không mất thời gian kiểm tra và vệ sinh\nKo\nKo\nKo",
+        "codes": [
+          "06",
+          "04"
+        ],
+        "code_labels": [
+          "Tiết kiệm thời gian",
+          "Dễ vệ sinh / Tự vệ sinh"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_8",
+        "verbatim": "Có thể tự tháo lắp mâm giặt để vệ sinh giúp mình chủ động hơn việc vệ sinh máy giặt không cần gọi dịch vụ vệ sinh ngoài\nKo\nKo\nKo\nKo",
+        "codes": [
+          "04",
+          "07"
+        ],
+        "code_labels": [
+          "Dễ vệ sinh / Tự vệ sinh",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_9",
+        "verbatim": "Thiết kế vân đá giúp không gian nội thất trong nhà hiện đại sang trọng\nCó đèn báo hoạt động giúp dễ dàng cập nhập tình trạng giặt\nKo\nKo\nKo",
+        "codes": [
+          "02",
+          "09"
+        ],
+        "code_labels": [
+          "Thiết kế / Thẩm mỹ",
+          "Thông tin / Hiển thị rõ ràng"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2002",
+        "question": "Concept_Like_10",
+        "verbatim": "Thiết kế bề mặt vân đá giúp không gian trong nhà hiện đại hơn\nKo\nKo\nKo\nKo",
+        "codes": [
+          "02"
+        ],
+        "code_labels": [
+          "Thiết kế / Thẩm mỹ"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_1",
+        "verbatim": "Thiết kế bảng điều khiển ở phía dưới giúp tất cả mọi người trong nhà đều có thể dễ dàng thao tác\nTay nắm cửa ở vị trí thấp giúp mở cửa sấy dễ dàng phù hợp với cả người có chiều cao khiêm tốn\nKo\nKo\nKo",
+        "codes": [
+          "01",
+          "10"
+        ],
+        "code_labels": [
+          "Dễ sử dụng / Thao tác",
+          "Phù hợp nhiều đối tượng"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_2",
+        "verbatim": "Cửa trượt không cần mở hẳn cửa gây tốn diện tích giúp lồng giặt sạch và ngăn ngừa nấm mốc\nKo\nKo\nKo\nKo",
+        "codes": [
+          "03",
+          "08"
+        ],
+        "code_labels": [
+          "Tiết kiệm không gian / Diện tích",
+          "Thông thoáng / Ngăn ngừa ẩm mốc"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_3",
+        "verbatim": "Chân chống nắp máy giặt giúp lồng giặt thông thoáng và ngăn ngừa nấm mốc mà không cần mở hẳn nắp lên tạo cảm giác rất tiện lợi dễ dùng\nKo\nKo\nKo\nKo",
+        "codes": [
+          "08",
+          "01"
+        ],
+        "code_labels": [
+          "Thông thoáng / Ngăn ngừa ẩm mốc",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_4",
+        "verbatim": "Màn hình lớn dễ nhìn dễ thao tác giúp mọi người trong nhà có thể sử dụng máy giặt tiện lợi hơn\nKo\nKo\nKo\nKo",
+        "codes": [
+          "01"
+        ],
+        "code_labels": [
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_5",
+        "verbatim": "Bảng điều khiển có thể điều chỉnh góc độ giúp phù hợp với nhu cầu sử dụng, khi không dùng đến có thể gập 180 độ giúp tận dụng tối ưu bề mặt máy giặt để mình có thể để đồ lên\nKo\nKo\nKo\nKo",
+        "codes": [
+          "01",
+          "03"
+        ],
+        "code_labels": [
+          "Dễ sử dụng / Thao tác",
+          "Tiết kiệm không gian / Diện tích"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_6",
+        "verbatim": "Công nghệ giọng nói thông minh giúp người dùng rảnh tay hơn khi sử dụng máy giặt\nKo\nKo\nKo\nKo",
+        "codes": [
+          "05",
+          "01"
+        ],
+        "code_labels": [
+          "Công nghệ thông minh / Tự động hóa",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_7",
+        "verbatim": "Tự động xả sạch xơ vải vì không cần người dùng phải tự vệ sinh để đỡ mất thời gian\nKo\nKo\nKo\nKo",
+        "codes": [
+          "05",
+          "06"
+        ],
+        "code_labels": [
+          "Công nghệ thông minh / Tự động hóa",
+          "Tiết kiệm thời gian"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_8",
+        "verbatim": "Người dùng có thể tự vệ sinh máy giặt và không cần thuê dịch vụ ngoài vì sẽ tiết kiệm được rất nhiều chi phí\nKo\nKo\nKo\nKo",
+        "codes": [
+          "04",
+          "07"
+        ],
+        "code_labels": [
+          "Dễ vệ sinh / Tự vệ sinh",
+          "Tiết kiệm chi phí"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_9",
+        "verbatim": "Đèn báo hoạt động giúp người dùng biết rõ máy giặt đang ở chế độ giặt nước nóng hay nước thường để sử dụng tiện lợi hơn\nKo\nKo\nKo\nKo",
+        "codes": [
+          "09",
+          "01"
+        ],
+        "code_labels": [
+          "Thông tin / Hiển thị rõ ràng",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      },
+      {
+        "ResID": "2003",
+        "question": "Concept_Like_10",
+        "verbatim": "Đèn LED chiếu sáng giúp mình nhận biết  được máy giặt đang hoạt động chức năng gì một cách rõ ràng và dễ hiểu hơn\nKo\nKo\nKo\nKo",
+        "codes": [
+          "09",
+          "01"
+        ],
+        "code_labels": [
+          "Thông tin / Hiển thị rõ ràng",
+          "Dễ sử dụng / Thao tác"
+        ],
+        "confidence": 1.0,
+        "is_coded": true,
+        "needs_review": false,
+        "note": ""
+      }
+    ]
+  }
+}
