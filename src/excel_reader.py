@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Đọc file Excel đầu vào
 Mỗi sheet = 1 câu hỏi mở

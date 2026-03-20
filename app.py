@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 app.py — Streamlit UI cho vcode
 Chạy: streamlit run app.py
