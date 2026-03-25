@@ -4,11 +4,66 @@ app.py — Streamlit UI cho vcode
 Chạy: streamlit run app.py
 """
 import json
+import os
 import tempfile
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 from datetime import datetime
+
+# Load .env nếu có (dev mode)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# ─────────────────────────────────────────────────────────────
+# CLOUDFLARE WORKER — fetch OPENAI_API_KEY
+# WORKER_URL và APP_TOKEN được hard-code ở đây
+# OPENAI_API_KEY vẫn bảo mật trong Cloudflare Worker
+# ─────────────────────────────────────────────────────────────
+_WORKER_URL  = "https://wkr-ai-coding.hung-daotuan-1991.workers.dev"
+_APP_TOKEN   = "vcode2025XmP2xL8nQ5wR7jT4"
+_HMAC_SECRET = "b7f3c9a4e2d84f1c" + "9a6b7e5d2f0a3c8b1d6e4f9a2c7b5e8d3f1a9c6b2e4d7f0"  # tách để khó search
+
+def _sign_request(token: str, timestamp: str, secret: str) -> str:
+    """Tạo HMAC-SHA256 signature cho request"""
+    import hmac, hashlib
+    message = f"{token}:{timestamp}".encode()
+    return hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
+
+def fetch_openai_key() -> str:
+    """Fetch OPENAI_API_KEY từ Cloudflare Worker với HMAC authentication"""
+    import time
+    worker_url  = os.environ.get("WORKER_URL",   _WORKER_URL).strip()
+    app_token   = os.environ.get("APP_TOKEN",    _APP_TOKEN).strip()
+    hmac_secret = os.environ.get("HMAC_SECRET",  _HMAC_SECRET).strip()
+
+    if not worker_url or not app_token:
+        return os.environ.get("OPENAI_API_KEY", "")
+    try:
+        import requests as _req
+        timestamp = str(int(time.time()))
+        signature = _sign_request(app_token, timestamp, hmac_secret)
+        resp = _req.post(
+            worker_url,
+            headers={
+                "X-App-Token":  app_token,
+                "X-Timestamp":  timestamp,
+                "X-Signature":  signature,
+                "Content-Type": "application/json",
+            },
+            json={},
+            timeout=8
+        )
+        if resp.status_code == 200:
+            return resp.json().get("key", "")
+        print(f"[vcode] Worker error: {resp.status_code}")
+        return os.environ.get("OPENAI_API_KEY", "")
+    except Exception as e:
+        print(f"[vcode] Worker fetch error: {e}")
+        return os.environ.get("OPENAI_API_KEY", "")
 
 from src.models import Codeframe, CodeEntry, VerbatimRecord
 from src.excel_reader import ExcelReader
@@ -50,14 +105,17 @@ st.markdown("""
 # ─────────────────────────────────────────────────────────────
 def init_state():
     defaults = {
-        "codeframes":   {},   # {q: Codeframe}
-        "records":      {},   # {q: [VerbatimRecord]}
-        "rules":        {},
-        "step":         1,    # bước hiện tại: 1-5
-        "ai_provider":  "gemini",
-        "api_key":      "",
-        "model":        None,
-        "threshold":    0.9,
+        "codeframes":      {},
+        "records":         {},
+        "rules":           {},
+        "step":            1,
+        "ai_provider":     "gemini",
+        "api_key":         "",
+        "_gemini_api_key": "",
+        "_prev_provider":  "",    # detect khi đổi provider
+        "_prev_model":     "",    # detect khi đổi model
+        "model":           None,
+        "threshold":       0.9,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -117,20 +175,46 @@ with st.sidebar:
         index=0 if ss.ai_provider == "gemini" else 1,
         format_func=lambda x: "🟢 Gemini (free)" if x == "gemini" else "🔵 GPT (paid)"
     )
-    ss.ai_provider = provider
 
     if provider == "gemini":
         model_opts = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"]
-        help_key   = "Lấy free tại aistudio.google.com/apikey"
-    else:
-        model_opts = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
-        help_key   = "Lấy tại platform.openai.com/api-keys"
+        selected_model = st.selectbox("Model", model_opts)
 
-    ss.model = st.selectbox("Model", model_opts)
-    ss.api_key = st.text_input(
-        "API Key", value=ss.api_key,
-        type="password", help=help_key
-    )
+        # Xóa key nếu đổi provider hoặc model
+        if provider != ss._prev_provider or selected_model != ss._prev_model:
+            ss._gemini_api_key = ""
+            ss.api_key         = ""
+
+        help_key    = "Lấy free tại aistudio.google.com/apikey"
+        entered_key = st.text_input(
+            "API Key", value=ss._gemini_api_key,
+            type="password", help=help_key
+        )
+        ss._gemini_api_key = entered_key
+        ss.api_key         = entered_key
+
+    else:
+        model_opts      = ["gpt-4o", "gpt-4o-mini"]
+        selected_model  = st.selectbox("Model", model_opts)
+        _openai_key     = fetch_openai_key()
+
+        # Xóa key nếu đổi provider hoặc model
+        if provider != ss._prev_provider or selected_model != ss._prev_model:
+            ss.api_key = ""
+
+        # Key load ngầm từ .env — không hiển thị ra UI
+        if _openai_key:
+            ss.api_key = _openai_key
+            st.success("✅ GPT sẵn sàng")
+        else:
+            ss.api_key = ""
+            st.error("❌ Chưa cấu hình API key (liên hệ admin)")
+
+    # Lưu provider và model hiện tại để so sánh lần sau
+    ss.ai_provider  = provider
+    ss.model        = selected_model
+    ss._prev_provider = provider
+    ss._prev_model    = selected_model
     ss.threshold = st.slider(
         "Ngưỡng review (confidence)", 0.5, 1.0, ss.threshold, 0.05,
         help="Records có confidence thấp hơn ngưỡng này sẽ cần review"

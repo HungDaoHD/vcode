@@ -8,3 +8,5 @@ openai>=1.30.0               # GPT (paid)
 # Core
 pandas>=2.0.0
 openpyxl>=3.1.0
+
+python-dotenv>=1.0.0

@@ -30,8 +30,8 @@ Luôn trả lời bằng JSON hợp lệ, không có markdown, không có text t
 class GPTCoder(BaseCoder):
     """AI coding engine dùng OpenAI GPT API"""
 
-    SUPPORTED_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
-
+    SUPPORTED_MODELS = ["gpt-4o", "gpt-4o-mini"]
+    
     def __init__(
         self,
         api_key: str = None,
