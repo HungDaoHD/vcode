@@ -34,40 +34,22 @@ def _sign_request(token: str, timestamp: str, secret: str) -> str:
     return hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
 
 def fetch_openai_key() -> str:
-    """Fetch OPENAI_API_KEY từ Cloudflare Worker với HMAC authentication"""
-    import time
-    worker_url  = os.environ.get("WORKER_URL",   _WORKER_URL).strip()
-    app_token   = os.environ.get("APP_TOKEN",    _APP_TOKEN).strip()
-    hmac_secret = os.environ.get("HMAC_SECRET",  _HMAC_SECRET).strip()
-
-    if not worker_url or not app_token:
-        return os.environ.get("OPENAI_API_KEY", "")
-    try:
-        import requests as _req
-        timestamp = str(int(time.time()))
-        signature = _sign_request(app_token, timestamp, hmac_secret)
-        resp = _req.post(
-            worker_url,
-            headers={
-                "X-App-Token":  app_token,
-                "X-Timestamp":  timestamp,
-                "X-Signature":  signature,
-                "Content-Type": "application/json",
-            },
-            json={},
-            timeout=8
-        )
-        if resp.status_code == 200:
-            return resp.json().get("key", "")
-        print(f"[vcode] Worker error: {resp.status_code}")
-        return os.environ.get("OPENAI_API_KEY", "")
-    except Exception as e:
-        print(f"[vcode] Worker fetch error: {e}")
-        return os.environ.get("OPENAI_API_KEY", "")
+    """Fetch OPENAI_API_KEY dùng session token — cache trong session"""
+    # Trả cache nếu đã có
+    if ss.get("_cached_openai_key"):
+        return ss._cached_openai_key
+    token = ss.get("auth_token") or _load_token()
+    if token:
+        key = get_openai_key(token)
+        if key:
+            ss._cached_openai_key = key  # cache lại
+            return key
+    return os.environ.get("OPENAI_API_KEY", "")
 
 from src.models import Codeframe, CodeEntry, VerbatimRecord
 from src.excel_reader import ExcelReader
 from src.session_manager import SessionManager
+from src.auth import send_otp, verify_otp, check_session, get_openai_key, ALLOWED_DOMAIN, block_email, unblock_email, list_blocked, is_admin, get_usage
 
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -82,6 +64,8 @@ st.set_page_config(
 st.markdown("""
 <style>
     .block-container { padding-top: 1.5rem; }
+    [data-testid="stDeployButton"] { display: none; }
+    footer { visibility: hidden; }
     .stTabs [data-baseweb="tab-list"] { gap: 2px; overflow-x: auto; flex-wrap: nowrap; margin-top: 2.5rem; }
     .stTabs { margin-top: 1rem; }
     .stTabs [data-baseweb="tab"] { font-size: 13px; padding: 8px 12px; white-space: nowrap; }
@@ -116,6 +100,11 @@ def init_state():
         "_prev_model":     "",    # detect khi đổi model
         "model":           None,
         "threshold":       0.9,
+        "auth_token":        "",
+        "auth_email":        "",
+        "auth_step":         "email",
+        "auth_otp_email":    "",
+        "_cached_openai_key": "",  # cache key, tránh gọi Worker mỗi lần render
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -123,6 +112,119 @@ def init_state():
 
 init_state()
 ss = st.session_state
+
+# ─────────────────────────────────────────────────────────────
+# AUTH GATE
+# ─────────────────────────────────────────────────────────────
+# Lưu token vào file để persist qua các lần tắt/mở app
+_TOKEN_FILE = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "vcode" / "session.json"
+
+def _save_token(token: str):
+    "Lưu token vào file"
+    try:
+        _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _TOKEN_FILE.write_text(json.dumps({"token": token}), encoding="utf-8")
+    except Exception:
+        pass
+    ss.auth_token = token
+
+def _clear_token():
+    "Xóa token khỏi file"
+    try:
+        if _TOKEN_FILE.exists():
+            _TOKEN_FILE.unlink()
+    except Exception:
+        pass
+
+def _load_token() -> str:
+    "Đọc token từ file hoặc session_state"
+    if ss.get("auth_token"):
+        return ss.auth_token
+    try:
+        if _TOKEN_FILE.exists():
+            data = json.loads(_TOKEN_FILE.read_text(encoding="utf-8"))
+            return data.get("token", "")
+    except Exception:
+        pass
+    return ""
+
+def _inject_token_reader():
+    pass  # không cần localStorage nữa
+
+
+def check_auth() -> bool:
+    token = _load_token()
+    if not token:
+        return False
+    valid, email = check_session(token)
+    if valid:
+        ss.auth_token = token
+        ss.auth_email = email
+        return True
+    ss.auth_token = ""
+    ss.auth_email = ""
+    ss.auth_step  = "email"
+    st.query_params.clear()
+    return False
+
+
+def show_login():
+    col = st.columns([1, 2, 1])[1]
+    with col:
+        st.markdown("## 🔤 vcode")
+        st.markdown("*Verbatim Coding Tool*")
+        st.divider()
+
+        if ss.auth_step == "email":
+            st.markdown("#### Đăng nhập")
+            st.caption(f"Chỉ chấp nhận email @{ALLOWED_DOMAIN}")
+            email = st.text_input("Email công ty", placeholder=f"ten@{ALLOWED_DOMAIN}")
+            if st.button("Gửi mã OTP", type="primary", width="stretch"):
+                if not email:
+                    st.error("Vui lòng nhập email")
+                elif not email.lower().endswith(f"@{ALLOWED_DOMAIN}"):
+                    st.error(f"Chỉ chấp nhận email @{ALLOWED_DOMAIN}")
+                else:
+                    with st.spinner("Đang gửi OTP..."):
+                        ok, msg = send_otp(email)
+                    if ok:
+                        ss.auth_otp_email = email
+                        ss.auth_step = "otp"
+                        st.rerun()
+                    else:
+                        st.error(msg)
+
+        elif ss.auth_step == "otp":
+            st.markdown("#### Nhập mã OTP")
+            st.info(f"Mã OTP đã gửi đến **{ss.auth_otp_email}**")
+            st.caption("Hiệu lực 10 phút")
+            otp = st.text_input("Mã OTP (6 chữ số)", max_chars=6, placeholder="123456")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("← Quay lại", width="stretch"):
+                    ss.auth_step = "email"
+                    st.rerun()
+            with c2:
+                if st.button("Xác nhận", type="primary", width="stretch"):
+                    if not otp or len(otp) != 6:
+                        st.error("Nhập đủ 6 chữ số")
+                    else:
+                        with st.spinner("Đang xác thực..."):
+                            ok, msg, token = verify_otp(ss.auth_otp_email, otp)
+                        if ok:
+                            ss.auth_token = token
+                            ss.auth_email = ss.auth_otp_email
+                            ss.auth_step  = "done"
+                            _save_token(token)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+
+
+if not check_auth():
+    show_login()
+    st.stop()
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -166,6 +268,15 @@ def records_to_df(question: str) -> pd.DataFrame:
 with st.sidebar:
     st.markdown("## 🔤 vcode")
     st.markdown("*Verbatim Coding Tool*")
+    if ss.auth_email:
+        st.caption(f"👤 {ss.auth_email}")
+        if st.button("Đăng xuất", width="stretch"):
+            ss.auth_token = ""
+            ss.auth_email = ""
+            ss.auth_step  = "email"
+            ss._cached_openai_key = ""
+            _clear_token()
+            st.rerun()
     st.divider()
 
     st.markdown("### ⚙️ Cấu hình AI")
@@ -196,13 +307,12 @@ with st.sidebar:
     else:
         model_opts      = ["gpt-4o", "gpt-4o-mini"]
         selected_model  = st.selectbox("Model", model_opts)
-        _openai_key     = fetch_openai_key()
-
         # Xóa key nếu đổi provider hoặc model
         if provider != ss._prev_provider or selected_model != ss._prev_model:
             ss.api_key = ""
 
-        # Key load ngầm từ .env — không hiển thị ra UI
+        # Fetch key từ Worker dùng session token
+        _openai_key = fetch_openai_key()
         if _openai_key:
             ss.api_key = _openai_key
             st.success("✅ GPT sẵn sàng")
@@ -249,12 +359,13 @@ with st.sidebar:
 # ─────────────────────────────────────────────────────────────
 # MAIN TABS
 # ─────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab_admin = st.tabs([
     "📁 Upload",
     "📋 Codeframe",
     "🤖 AI Coding",
     "🔍 Review",
     "💾 Export",
+    "⚙️ Admin",
 ])
 
 
@@ -291,7 +402,7 @@ with tab1:
                                 for d in dups:
                                     st.code(d)
 
-                    if st.button("📥 Load dữ liệu này", type="primary", use_container_width=True):
+                    if st.button("📥 Load dữ liệu này", type="primary", width="stretch"):
                         if ss.records:
                             # Tính số records mới
                             existing_keys = {
@@ -342,7 +453,7 @@ with tab1:
                 )
                 st.info(f"📦 {n_q} câu hỏi · {n_coded}/{n_r} records đã coded")
 
-                if st.button("📂 Load session", use_container_width=True):
+                if st.button("📂 Load session", width="stretch"):
                     with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w", encoding="utf-8") as tmp:
                         json.dump(data, tmp, ensure_ascii=False)
                         tmp_path = tmp.name
@@ -398,7 +509,7 @@ with tab1:
         )
         btn_save, btn_export = st.columns(2)
         with btn_save:
-            if st.button("💾 Lưu rules", use_container_width=True):
+            if st.button("💾 Lưu rules", width="stretch"):
                 try:
                     ss.rules = json.loads(rules_text)
                     st.success(f"✅ Đã lưu {len(ss.rules)} rules")
@@ -411,7 +522,7 @@ with tab1:
                 data=export_rules.encode("utf-8"),
                 file_name="rules.json",
                 mime="application/json",
-                use_container_width=True,
+                width="stretch",
                 disabled=not ss.rules
             )
 
@@ -433,7 +544,7 @@ with tab2:
         # Sinh codeframe tất cả câu hỏi
         col_gen, col_info = st.columns([1, 2])
         with col_gen:
-            if st.button("🤖 AI sinh codeframe tất cả", type="primary", use_container_width=True):
+            if st.button("🤖 AI sinh codeframe tất cả", type="primary", width="stretch"):
                 with st.spinner("Đang sinh codeframe..."):
                     try:
                         coder = get_coder()
@@ -481,6 +592,43 @@ with tab2:
                         except Exception as e:
                             st.error(f"❌ {e}")
 
+                # Paste từ Excel
+                with st.expander("📋 Paste từ Excel", expanded=False):
+                    st.caption("Copy 2 cột từ Excel: code_id | label rồi paste vào đây")
+                    excel_paste = st.text_area(
+                        "Paste dữ liệu Excel",
+                        placeholder="01\tGiá cả\n02\tChất lượng\n03\tThương hiệu\n...",
+                        height=150,
+                        label_visibility="collapsed",
+                        key=f"excel_paste_{q}"
+                    )
+                    if st.button("📥 Load từ Excel", key=f"load_excel_{q}", width="stretch"):
+                        if excel_paste.strip():
+                            try:
+                                new_codes = []
+                                for line in excel_paste.strip().splitlines():
+                                    parts = line.strip().split("\t")
+                                    if len(parts) >= 2:
+                                        code_id = parts[0].strip()
+                                        label   = parts[1].strip()
+                                        if code_id and label:
+                                            new_codes.append(CodeEntry(code_id=code_id, label=label, description=""))
+                                if new_codes:
+                                    existing = ss.codeframes.get(q)
+                                    ss.codeframes[q] = Codeframe(
+                                        question_code=q,
+                                        question_text=existing.question_text if existing else "",
+                                        codes=new_codes
+                                    )
+                                    st.success(f"✅ Đã load {len(new_codes)} mã từ Excel")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Không đọc được dữ liệu — kiểm tra định dạng cột")
+                            except Exception as e:
+                                st.error(f"❌ {e}")
+                        else:
+                            st.warning("Chưa có dữ liệu để load")
+
                 if q in ss.codeframes:
                     cf = ss.codeframes[q]
 
@@ -492,7 +640,7 @@ with tab2:
                     edited = st.data_editor(
                         pd.DataFrame(codes_data),
                         num_rows="dynamic",
-                        use_container_width=True,
+                        width="stretch",
                         key=f"codes_editor_{q}",
                         column_config={
                             "code_id":     st.column_config.TextColumn("Mã ID", width=80),
@@ -503,7 +651,7 @@ with tab2:
 
                     col_save, col_dl = st.columns(2)
                     with col_save:
-                        if st.button(f"💾 Lưu thay đổi {q}", key=f"save_cf_{q}", use_container_width=True):
+                        if st.button(f"💾 Lưu thay đổi {q}", key=f"save_cf_{q}", width="stretch"):
                             new_codes = [
                                 CodeEntry(
                                     code_id=str(row["code_id"]),
@@ -525,7 +673,7 @@ with tab2:
                         st.download_button(
                             f"⬇️ Tải codeframe_{q}.json",
                             cf_json, f"codeframe_{q}.json", "application/json",
-                            use_container_width=True, key=f"dl_cf_{q}"
+                            width="stretch", key=f"dl_cf_{q}"
                         )
 
 
@@ -572,7 +720,7 @@ with tab3:
             help="Bật để ghi đè kết quả coding cũ"
         )
 
-        if st.button("▶️ Bắt đầu AI Coding", type="primary", use_container_width=True, disabled=not selected_qs):
+        if st.button("▶️ Bắt đầu AI Coding", type="primary", width="stretch", disabled=not selected_qs):
             if not ss.api_key:
                 st.error("❌ Chưa nhập API key")
             else:
@@ -631,7 +779,7 @@ with tab3:
             if preview_q:
                 df = records_to_df(preview_q)
                 if not df.empty:
-                    st.dataframe(df, use_container_width=True, height=300)
+                    st.dataframe(df, width="stretch", height=300)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -665,7 +813,7 @@ with tab4:
         st.divider()
 
         # Approve all button
-        if st.button("✅ Duyệt tất cả (giữ nguyên AI coding)", use_container_width=True):
+        if st.button("✅ Duyệt tất cả (giữ nguyên AI coding)", width="stretch"):
             for q, recs in ss.records.items():
                 for r in recs:
                     if r.needs_review:
@@ -677,6 +825,7 @@ with tab4:
 
         # Từng record
         for idx, (q, rec, cf) in enumerate(filtered):
+            _uk = f"{q}_{rec.question}_{rec.res_id}"  # unique key
             conf_color = "🔴" if rec.confidence < 0.6 else "🟡"
             with st.expander(
                 f"{conf_color} [{q}] ResID {rec.res_id} — confidence {rec.confidence:.2f}",
@@ -700,18 +849,18 @@ with tab4:
                         new_sel = st.multiselect(
                             "Mã", list(code_options.keys()),
                             default=current_selected,
-                            key=f"review_sel_{q}_{rec.res_id}",
+                            key=f"review_sel_{_uk}",
                             label_visibility="collapsed"
                         )
 
                 col_approve, col_recode = st.columns(2)
                 with col_approve:
-                    if st.button("✅ Duyệt", key=f"approve_{q}_{rec.res_id}", use_container_width=True):
+                    if st.button("✅ Duyệt", key=f"approve_{_uk}", width="stretch"):
                         rec.needs_review = False
                         st.rerun()
 
                 with col_recode:
-                    if st.button("💾 Lưu mã mới", key=f"recode_{q}_{rec.res_id}", use_container_width=True):
+                    if st.button("💾 Lưu mã mới", key=f"recode_{_uk}", width="stretch"):
                         if cf and new_sel:
                             new_ids    = [code_options[s] for s in new_sel]
                             new_labels = [s.split(" – ", 1)[1] for s in new_sel]
@@ -770,7 +919,7 @@ with tab5:
                     if v > 0
                 ])
                 if not df_chart.empty:
-                    st.dataframe(df_chart, use_container_width=True, hide_index=True)
+                    st.dataframe(df_chart, width="stretch", hide_index=True)
 
         st.divider()
 
@@ -800,7 +949,7 @@ with tab5:
             st.download_button(
                 "📄 Tải session.json (toàn bộ)",
                 json_bytes, "session.json", "application/json",
-                use_container_width=True, type="primary"
+                width="stretch", type="primary"
             )
             st.caption("Dùng để load lại lần sau")
 
@@ -825,7 +974,7 @@ with tab5:
             st.download_button(
                 "📊 Tải CSV (mở bằng Excel)",
                 csv_bytes, "vcode_results.csv", "text/csv",
-                use_container_width=True
+                width="stretch"
             )
             st.caption("UTF-8 BOM — mở Excel không lỗi font")
 
@@ -842,5 +991,79 @@ with tab5:
                 f"⬇️ {q}.json",
                 json.dumps(q_data, ensure_ascii=False, indent=2).encode("utf-8"),
                 f"{q}_coded.json", "application/json",
-                use_container_width=True, key=f"dl_{q}"
+                width="stretch", key=f"dl_{q}"
             )
+
+
+# ══════════════════════════════════════════════════════════════
+# TAB ADMIN: Quản lý user
+# ══════════════════════════════════════════════════════════════
+with tab_admin:
+    st.markdown("### ⚙️ Quản lý User")
+
+    # Kiểm tra quyền admin từ Cloudflare KV
+    if not is_admin(ss.auth_email):
+        st.warning("⛔ Chỉ admin mới có quyền truy cập")
+        st.stop()
+
+    st.divider()
+
+    # Block email
+    st.markdown("#### 🚫 Block email")
+    col_b1, col_b2 = st.columns([3, 1])
+    with col_b1:
+        email_to_block = st.text_input("Email cần block", placeholder=f"ten@{ALLOWED_DOMAIN}", key="block_input")
+    with col_b2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Block", type="primary", key="btn_block"):
+            if email_to_block:
+                ok, msg = block_email(email_to_block)
+                if ok:
+                    st.success(f"✅ {msg}")
+                else:
+                    st.error(f"❌ {msg}")
+            else:
+                st.warning("Nhập email cần block")
+
+    st.divider()
+
+    # Usage tracking
+    st.markdown("#### 📊 Thống kê sử dụng GPT API")
+    days_opt = st.selectbox("Thời gian", [7, 14, 30], format_func=lambda x: f"{x} ngày gần nhất", key="usage_days")
+    if st.button("🔄 Xem thống kê", key="btn_usage"):
+        with st.spinner("Đang tải..."):
+            usage_data = get_usage(days_opt)
+        if not usage_data:
+            st.info("Chưa có dữ liệu usage")
+        else:
+            total_calls = sum(u["total"] for u in usage_data)
+            st.caption(f"Tổng {total_calls} lần gọi API trong {days_opt} ngày")
+            df_usage = pd.DataFrame([
+                {"Email": u["email"], "Số lần gọi": u["total"]}
+                for u in usage_data
+            ])
+            st.dataframe(df_usage, width="stretch", hide_index=True)
+
+    st.divider()
+
+    # Danh sách đang bị block
+    st.markdown("#### 📋 Danh sách email bị block")
+    if st.button("🔄 Refresh", key="btn_refresh_blocked"):
+        st.rerun()
+
+    blocked_list = list_blocked()
+    if not blocked_list:
+        st.info("Không có email nào bị block")
+    else:
+        for email in blocked_list:
+            col_e, col_u = st.columns([4, 1])
+            with col_e:
+                st.markdown(f"🚫 `{email}`")
+            with col_u:
+                if st.button("Unblock", key=f"unblock_{email}"):
+                    ok, msg = unblock_email(email)
+                    if ok:
+                        st.success(f"✅ {msg}")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {msg}")
