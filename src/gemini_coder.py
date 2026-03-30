@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 GeminiCoder — gọi Google Gemini API (free tier) để:
 1. Sinh codeframe từ verbatim samples
@@ -210,16 +211,28 @@ Quy tắc:
 - note để trống nếu không cần giải thích."""
         parsed = json.loads(self._call_gemini(SYSTEM_CODING, prompt))
         items  = self._parse_coding_response(parsed)
-        return self._map_results(records, items)
+        return self._map_results(records, items, codeframe)
 
     @staticmethod
-    def _map_results(records: list[VerbatimRecord], items: list[dict]) -> list[VerbatimRecord]:
+    def _map_results(records: list[VerbatimRecord], items: list[dict], cf=None) -> list[VerbatimRecord]:
+        # Build label lookup từ codeframe (ưu tiên hơn label do AI trả)
+        cf_labels = {}
+        if cf:
+            for c in cf.codes:
+                cf_labels[c.code_id] = c.label
+
         result_map = {item["idx"]: item for item in items}
         coded = []
         for i, rec in enumerate(records):
             res = result_map.get(i, {})
-            rec.codes        = res.get("codes", ["99"])
-            rec.code_labels  = res.get("code_labels", ["Khác"])
+            codes = res.get("codes", ["99"])
+            # Lookup label từ codeframe, fallback về AI label nếu không tìm thấy
+            labels = [cf_labels.get(cid, lbl) for cid, lbl in zip(
+                codes,
+                res.get("code_labels", ["Other"] * len(codes))
+            )]
+            rec.codes        = codes
+            rec.code_labels  = labels
             rec.confidence   = float(res.get("confidence", 0.5))
             rec.note         = res.get("note", "")
             rec.is_coded     = True

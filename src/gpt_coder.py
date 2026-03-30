@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 GPTCoder — gọi OpenAI GPT API để:
 1. Sinh codeframe từ verbatim samples
@@ -31,7 +32,7 @@ class GPTCoder(BaseCoder):
     """AI coding engine dùng OpenAI GPT API"""
 
     SUPPORTED_MODELS = ["gpt-4o", "gpt-4o-mini"]
-    
+
     def __init__(
         self,
         api_key: str = None,
@@ -167,7 +168,7 @@ Quy tắc:
         )
         parsed = json.loads(resp.choices[0].message.content)
         items  = self._parse_coding_response(parsed)
-        return self._map_results(records, items)
+        return self._map_results(records, items, codeframe)
 
     # ------------------------------------------------------------------
     # HELPER
@@ -175,14 +176,26 @@ Quy tắc:
     @staticmethod
     def _map_results(
         records: list[VerbatimRecord],
-        items: list[dict]
+        items: list[dict],
+        cf=None
     ) -> list[VerbatimRecord]:
+        # Build label lookup từ codeframe
+        cf_labels = {}
+        if cf:
+            for c in cf.codes:
+                cf_labels[c.code_id] = c.label
+
         result_map = {item["idx"]: item for item in items}
         coded = []
         for i, rec in enumerate(records):
             res = result_map.get(i, {})
-            rec.codes        = res.get("codes", ["99"])
-            rec.code_labels  = res.get("code_labels", ["Khác"])
+            codes = res.get("codes", ["99"])
+            labels = [cf_labels.get(cid, lbl) for cid, lbl in zip(
+                codes,
+                res.get("code_labels", ["Other"] * len(codes))
+            )]
+            rec.codes        = codes
+            rec.code_labels  = labels
             rec.confidence   = float(res.get("confidence", 0.5))
             rec.note         = res.get("note", "")
             rec.is_coded     = True

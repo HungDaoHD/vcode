@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Data models cho vcode — Verbatim Coding Tool
 """
@@ -11,12 +12,18 @@ class CodeEntry:
     code_id: str        # VD: "01", "02", "99"
     label: str          # Tên mã, VD: "Giá cả tốt"
     description: str = ""  # Mô tả / ví dụ cho mã này
+    net1: str = ""         # Net 1 label
+    net2: str = ""         # Net 2 label
+    net3: str = ""         # Net 3 label
 
     def to_dict(self):
         return {
-            "code_id": self.code_id,
-            "label": self.label,
-            "description": self.description
+            "code_id":     self.code_id,
+            "label":       self.label,
+            "description": self.description,
+            "net1":        self.net1,
+            "net2":        self.net2,
+            "net3":        self.net3,
         }
 
     @classmethod
@@ -24,7 +31,10 @@ class CodeEntry:
         return cls(
             code_id=d["code_id"],
             label=d["label"],
-            description=d.get("description", "")
+            description=d.get("description", ""),
+            net1=d.get("net1", ""),
+            net2=d.get("net2", ""),
+            net3=d.get("net3", ""),
         )
 
 

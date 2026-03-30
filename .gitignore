@@ -24,3 +24,10 @@ secrets.json
 .env
 
 MYSECRETS.txt
+
+data/
+output/
+old/
+
+.xlsx
+.csv
