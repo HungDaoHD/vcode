@@ -92,16 +92,16 @@ Cloudflare Worker  ←  OPENAI_API_KEY (never leaves Cloudflare)
 | Variable | Type | Value |
 |----------|------|-------|
 | `OPENAI_API_KEY` | Secret | `sk-...` |
-| `APP_TOKEN` | Secret | `vcode2025XmP2xL8nQ5wR7jT4` |
-| `HMAC_SECRET` | Secret | `b7f3c9a4e2d84f1c9a6b7e5d...` |
-| `BREVO_API_KEY` | Secret | `xkeysib-...` |
+| `APP_TOKEN` | Secret | *(set in Cloudflare)* |
+| `HMAC_SECRET` | Secret | *(set in Cloudflare)* |
+| `BREVO_API_KEY` | Secret | *(set in Cloudflare)* |
 | `BREVO_SENDER` | Plain | sender Gmail address |
 
 ### KV Binding
 
 | Variable name | Namespace | ID |
 |--------------|-----------|-----|
-| `KV` | `vcode-auth` | `8e32e775c3494e8da7bc3979bab6ab9a` |
+| `KV` | `vcode-auth` | *(your KV namespace ID)* |
 
 ### KV Key Schema
 
@@ -118,7 +118,7 @@ Cloudflare Worker  ←  OPENAI_API_KEY (never leaves Cloudflare)
 
 In Cloudflare KV dashboard → `vcode-auth` → Add entry:
 ```
-Key:   admin:hung.daotuan@asia-plus.net
+Key:   admin:your.email@asia-plus.net
 Value: 1
 ```
 
@@ -142,8 +142,8 @@ venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env file
-WORKER_URL=https://wkr-ai-coding.hung-daotuan-1991.workers.dev
-APP_TOKEN=vcode2025XmP2xL8nQ5wR7jT4
+WORKER_URL=<your_worker_url>
+APP_TOKEN=<your_app_token>
 
 # Run Streamlit directly
 streamlit run app.py
