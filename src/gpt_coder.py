@@ -189,7 +189,7 @@ Quy tắc:
         coded = []
         for i, rec in enumerate(records):
             res = result_map.get(i, {})
-            codes = res.get("codes", ["99"])
+            codes = [str(c) for c in res.get("codes", ["99"])]
             labels = [cf_labels.get(cid, lbl) for cid, lbl in zip(
                 codes,
                 res.get("code_labels", ["Other"] * len(codes))
