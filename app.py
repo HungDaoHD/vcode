@@ -825,8 +825,9 @@ with tab3:
             help="Enable to overwrite previous coding results"
         )
 
-        # Batch size tự động theo provider
+        # Batch size tự động theo provider — set vào session để dùng trong coding loop
         batch_size = 100 if ss.ai_provider == "gemini" else 50
+        ss["_coding_batch"] = batch_size
 
         # Show spinner instead of button while coding
         if is_loading("coding"):
@@ -849,7 +850,7 @@ with tab3:
                     if not to_code:
                         continue
                     status.info(f"⏳ Coding [{q}] — {len(to_code)} verbatim...")
-                    coded = coder.dedup_and_code(to_code, cf, ss.rules)
+                    coded = coder.dedup_and_code(to_code, cf, ss.rules, batch_size=ss.get("_coding_batch", 25))
                     ss.records[q] = already + coded
                     low = sum(1 for r in coded if r.needs_review)
                     st.success(f"✅ [{q}] Done — {low} records need review")
