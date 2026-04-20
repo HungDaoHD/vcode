@@ -65,9 +65,25 @@ echo     sys.exit^(stcli.main^(^)^)
 echo      Source bundle: OK
 
 REM =============================================
-REM 2. Cai Electron dependencies
+REM 2. Download VC++ Redistributable de bundle
 REM =============================================
-echo [2/4] Cai Electron dependencies...
+echo [2/5] Kiem tra VC++ Redistributable...
+if not exist "vc_redist.x64.exe" (
+    echo [INFO] Dang tai vc_redist.x64.exe ~25MB...
+    powershell -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile 'vc_redist.x64.exe'"
+    if not exist "vc_redist.x64.exe" (
+        echo [ERROR] Khong tai duoc vc_redist.x64.exe. Kiem tra ket noi internet.
+        pause & exit /b 1
+    )
+    echo      Da tai vc_redist.x64.exe
+) else (
+    echo      vc_redist.x64.exe da co san
+)
+
+REM =============================================
+REM 3. Cai Electron dependencies
+REM =============================================
+echo [3/5] Cai Electron dependencies...
 cd electron
 call npm install --quiet
 if %errorlevel% neq 0 (
@@ -79,7 +95,7 @@ echo      Electron: OK
 REM =============================================
 REM 3. Build .exe
 REM =============================================
-echo [3/4] Building .exe (co the mat 5-10 phut lan dau)...
+echo [4/5] Building .exe (co the mat 5-10 phut lan dau)...
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set WIN_CSC_LINK=
 set CSC_LINK=
@@ -117,6 +133,14 @@ if not exist "dist\win-unpacked\venv\Scripts\python.exe" (
     pause & exit /b 1
 )
 echo      Venv: OK - python.exe da co tai dist\win-unpacked\venv\Scripts\
+
+REM Xoa .env khoi dist de tranh leak API key
+echo [SECURITY] Xoa .env khoi dist...
+del /f /q "dist\win-unpacked\.env" 2>nul
+del /f /q "dist\win-unpacked\resources\python\.env" 2>nul
+del /f /q "dist\win-unpacked\venv\.env" 2>nul
+for /r "dist\win-unpacked" %%f in (.env .env.*) do del /f /q "%%f" 2>nul
+echo      .env da duoc xoa khoi dist (neu co)
 
 echo.
 echo ============================================

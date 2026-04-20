@@ -49,7 +49,7 @@ def fetch_openai_key() -> str:
 from src.models import Codeframe, CodeEntry, VerbatimRecord
 from src.excel_reader import ExcelReader
 from src.session_manager import SessionManager
-from src.auth import send_otp, verify_otp, check_session, get_openai_key, ALLOWED_DOMAIN, block_email, unblock_email, list_blocked, is_admin, get_usage
+from src.auth import send_otp, verify_otp, check_session, get_openai_key, ALLOWED_DOMAIN, block_email, unblock_email, list_blocked, is_admin, get_usage, save_usage_cost
 from src.i18n import t
 
 # ─────────────────────────────────────────────────────────────
@@ -95,9 +95,8 @@ def init_state():
         "records":         {},
         "rules":           {},
         "step":            1,
-        "ai_provider":     "gemini",
+        "ai_provider":     "gpt",
         "api_key":         "",
-        "_gemini_api_key": "",
         "_prev_provider":  "",    # detect provider change
         "_prev_model":     "",    # detect model change
         "model":           None,
@@ -248,6 +247,8 @@ if not check_auth():
 # ─────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────
+USD_TO_VND = 25_000  # Tỷ giá cố định, cập nhật thủ công khi cần
+
 @st.cache_data(show_spinner=False)
 def _cached_bytes(data: str) -> bytes:
     """Cache download data để tránh MediaFileHandler missing file error"""
@@ -305,51 +306,28 @@ with st.sidebar:
     st.divider()
 
     st.markdown(t("sidebar_ai_config", lang()))
-    provider = st.selectbox(
-        "AI Provider",
-        ["gemini", "gpt"],
-        index=0 if ss.ai_provider == "gemini" else 1,
-        format_func=lambda x: t("sidebar_gemini_label", lang()) if x == "gemini" else t("sidebar_gpt_label", lang())
-    )
 
-    if provider == "gemini":
-        model_opts = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"]
-        selected_model = st.selectbox("Model", model_opts)
+    # GPT only
+    ss.ai_provider  = "gpt"
+    model_opts      = ["gpt-4o", "gpt-4o-mini"]
+    selected_model  = st.selectbox(t("sidebar_model", lang()), model_opts)
 
-        # Clear key if provider or model changes
-        if provider != ss._prev_provider or selected_model != ss._prev_model:
-            ss._gemini_api_key = ""
-            ss.api_key         = ""
+    # Clear key if model changes
+    if selected_model != ss._prev_model:
+        ss.api_key = ""
 
-        help_key    = t("sidebar_gemini_help", lang())
-        entered_key = st.text_input(
-            "API Key", value=ss._gemini_api_key,
-            type="password", help=help_key
-        )
-        ss._gemini_api_key = entered_key
-        ss.api_key         = entered_key
-
+    # Fetch key from Worker
+    _openai_key = fetch_openai_key()
+    if _openai_key:
+        ss.api_key = _openai_key
+        st.success(t("sidebar_gpt_ready", lang()))
     else:
-        model_opts      = ["gpt-4o", "gpt-4o-mini"]
-        selected_model  = st.selectbox(t("sidebar_model", lang()), model_opts)
-        # Clear key if provider or model changes
-        if provider != ss._prev_provider or selected_model != ss._prev_model:
-            ss.api_key = ""
+        ss.api_key = ""
+        st.error(t("sidebar_gpt_no_key", lang()))
 
-        # Fetch key from Worker using session token
-        _openai_key = fetch_openai_key()
-        if _openai_key:
-            ss.api_key = _openai_key
-            st.success(t("sidebar_gpt_ready", lang()))
-        else:
-            ss.api_key = ""
-            st.error(t("sidebar_gpt_no_key", lang()))
-
-    # Save current provider and model for next comparison
-    ss.ai_provider  = provider
-    ss.model        = selected_model
-    ss._prev_provider = provider
+    ss.model          = selected_model
     ss._prev_model    = selected_model
+    ss._prev_provider = "gpt" 
     ss.threshold = st.slider(
         t("sidebar_threshold", lang()), 0.5, 1.0, ss.threshold, 0.05,
         help=t("sidebar_threshold_help", lang())
@@ -826,7 +804,7 @@ with tab3:
         )
 
         # Batch size tự động theo provider — set vào session để dùng trong coding loop
-        batch_size = 100 if ss.ai_provider == "gemini" else 50
+        batch_size = 50  # GPT only
         ss["_coding_batch"] = batch_size
 
         # Show spinner instead of button while coding
@@ -835,6 +813,9 @@ with tab3:
             _coding_error = None
             try:
                 coder = get_coder()
+                # Reset usage counter trước mỗi run
+                if hasattr(coder, 'reset_usage'):
+                    coder.reset_usage()
                 overall_progress = st.progress(0)
                 status = st.empty()
 
@@ -858,6 +839,21 @@ with tab3:
 
                 status.empty()
                 ss.step = max(ss.step, 4)
+
+                # Track token usage from GPT coder
+                if hasattr(coder, 'get_usage'):
+                    usage = coder.get_usage()
+                    ss["_last_usage"] = usage
+                    # Save to Cloudflare KV
+                    if usage["total_tokens"] > 0 and ss.get("auth_token"):
+                        save_usage_cost(
+                            token=ss.auth_token,
+                            input_tokens=usage["input_tokens"],
+                            output_tokens=usage["output_tokens"],
+                            total_tokens=usage["total_tokens"],
+                            cost_usd=usage["cost_usd"],
+                        )
+
             except Exception as e:
                 _coding_error = e
 
@@ -874,6 +870,18 @@ with tab3:
                 set_loading("coding", True)
                 st.rerun()
 
+        # Show last usage stats
+        if ss.get("_last_usage") and not is_loading("coding"):
+            u = ss["_last_usage"]
+            st.divider()
+            st.markdown("#### 📊 Last Run Usage")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Input Tokens",  f"{u['input_tokens']:,}")
+            c2.metric("Output Tokens", f"{u['output_tokens']:,}")
+            c3.metric("Total Tokens",  f"{u['total_tokens']:,}")
+            vnd = u['cost_usd'] * USD_TO_VND
+            c4.metric("Cost", f"${u['cost_usd']:.4f}  (~{vnd:,.0f} ₫)")
+
         if False:  # dummy block to maintain indentation
                 try:
                     pass
@@ -886,7 +894,7 @@ with tab3:
                         m2 = re.search(r'chờ khoảng ([0-9]+) phút', err_str)
                         wait_min = int((m or m2).group(1)) if (m or m2) else 1
                         st.warning(
-                            f"⛔ **Gemini rate limit!** "
+                            f"⛔ **Rate limit!** "
                             f"Please wait approximately **{wait_min} minutes** then try coding again.\n\n"
                             f"_{err_str}_"
                         )
@@ -1185,7 +1193,16 @@ with tab_admin:
             total_calls = sum(u["total"] for u in usage_data)
             st.caption(t("admin_usage_total", lang(), n=total_calls, d=days_opt))
             df_usage = pd.DataFrame([
-                {t("admin_usage_email", lang()): u["email"], t("admin_usage_count", lang()): u["total"]}
+                {
+                    t("admin_usage_email", lang()): u["email"],
+                    "API Calls":     u.get("total", 0),
+                    "Coding Runs":   u.get("runs", 0),
+                    "Total Tokens":  f"{u.get('total_tokens', 0):,}",
+                    "Input Tokens":  f"{u.get('input_tokens', 0):,}",
+                    "Output Tokens": f"{u.get('output_tokens', 0):,}",
+                    "Cost (USD)":    f"${u.get('cost_usd', 0):.4f}",
+                    "Cost (VNĐ)":    f"{u.get('cost_usd', 0) * USD_TO_VND:,.0f} ₫",
+                }
                 for u in usage_data
             ])
             st.dataframe(df_usage, width="stretch", hide_index=True)

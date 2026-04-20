@@ -140,3 +140,16 @@ def get_usage(days: int = 7) -> list[dict]:
     """Lấy thống kê usage theo email trong N ngày gần nhất"""
     result = _call("/get-usage", {"days": days})
     return result.get("usage", [])
+
+
+def save_usage_cost(token: str, input_tokens: int, output_tokens: int,
+                    total_tokens: int, cost_usd: float) -> bool:
+    """Lưu token usage và chi phí lên Cloudflare KV"""
+    result = _call("/save-usage-cost", {
+        "token":         token,
+        "input_tokens":  input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens":  total_tokens,
+        "cost_usd":      cost_usd,
+    })
+    return result.get("ok", False)

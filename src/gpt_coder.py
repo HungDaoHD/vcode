@@ -28,6 +28,18 @@ Nhiệm vụ: gán mã (multi-code) cho từng verbatim dựa trên codeframe v�
 Luôn trả lời bằng JSON hợp lệ, không có markdown, không có text thừa."""
 
 
+# GPT pricing (USD per 1M tokens) — update if OpenAI changes pricing
+GPT_PRICING = {
+    "gpt-4o":      {"input": 2.50,  "output": 10.00},
+    "gpt-4o-mini": {"input": 0.15,  "output": 0.60},
+}
+
+def calc_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Calculate USD cost for a GPT API call"""
+    p = GPT_PRICING.get(model, {"input": 2.50, "output": 10.00})
+    return (input_tokens * p["input"] + output_tokens * p["output"]) / 1_000_000
+
+
 class GPTCoder(BaseCoder):
     """AI coding engine dùng OpenAI GPT API"""
 
@@ -46,6 +58,10 @@ class GPTCoder(BaseCoder):
             )
         self.client = OpenAI(api_key=key)
         self.model  = model
+        # Token usage tracking (instance variables)
+        self._session_input_tokens  = 0
+        self._session_output_tokens = 0
+        self._session_cost_usd      = 0.0
         print(f"  ✓ GPTCoder khởi tạo — model: {self.model}")
 
     # ------------------------------------------------------------------
@@ -97,6 +113,19 @@ Trả về JSON theo format sau, KHÔNG có markdown:
     # ------------------------------------------------------------------
     # 2. CODING VERBATIM (batch)
     # ------------------------------------------------------------------
+    def reset_usage(self):
+        self._session_input_tokens  = 0
+        self._session_output_tokens = 0
+        self._session_cost_usd      = 0.0
+
+    def get_usage(self) -> dict:
+        return {
+            "input_tokens":  self._session_input_tokens,
+            "output_tokens": self._session_output_tokens,
+            "total_tokens":  self._session_input_tokens + self._session_output_tokens,
+            "cost_usd":      round(self._session_cost_usd, 6),
+        }
+
     def code_batch(
         self,
         records: list[VerbatimRecord],
@@ -166,6 +195,14 @@ Quy tắc:
             temperature=0.1,
             response_format={"type": "json_object"}
         )
+        # Track token usage
+        if resp.usage:
+            it = resp.usage.prompt_tokens
+            ot = resp.usage.completion_tokens
+            self._session_input_tokens  += it
+            self._session_output_tokens += ot
+            self._session_cost_usd      += calc_cost(self.model, it, ot)
+
         parsed = json.loads(resp.choices[0].message.content)
         items  = self._parse_coding_response(parsed)
         return self._map_results(records, items, codeframe)
